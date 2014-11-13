@@ -70,7 +70,7 @@
             GlobalAjaxListener._tempSend.apply(xhr, arguments);
         }
 
-        if(jQuery && $ && jQuery.fn.jquery.substr(0,1) === 1){
+        if(jQuery && $ && jQuery.fn.jquery.split(".")[0] == '1'){
             //兼容jQuery 1.x
             jQuery( document ).ajaxComplete(function( event, xhr, settings ) {
                 //测试jQuery1.9会把onreadystatechange又覆盖。此处做监听进行兼容判断
