@@ -25,4 +25,4 @@ GlobalAjaxListener - 全局ajax监听器
         };
 
 # 注意版本 #
-当ajax使用的太过分了，导致xhr对象都给重写了，GlobalAjaxListener是无法实现监听到完成事件的。比如jquery1.9的版本，请用Jquery.GlobalAjaxListener.js
+当ajax使用的太过分了，导致xhr对象都给重写了，GlobalAjaxListener是无法实现监听到完成事件的。比如jquery2以上的版本，请用Jquery2.GlobalAjaxListener.js

@@ -12,6 +12,7 @@
     }
     if (window.XMLHttpRequest) {
         var GlobalAjaxListener = {
+            //是否支持重定向，不能跨域
             redirectSupport:false,
             //xhr为扩展对象，含有属性 method,url,async,data
             beforeSend: function (xhr) {
@@ -69,21 +70,21 @@
             GlobalAjaxListener._tempSend.apply(xhr, arguments);
         }
 
-//        if(jQuery && $){
-//            //兼容jQuery
-//            jQuery( document ).ajaxComplete(function( event, xhr, settings ) {
-//                //测试jQuery1.9会把onreadystatechange又覆盖。此处做监听进行兼容判断
-//                if(!xhr._onreadystatechange || xhr._onreadystatechange !== xhr.onreadystatechange){
-//                    if(!xhr._GlobalAjaxListenerComplete){
-//                        xhr.method = settings.type;
-//                        xhr.url = settings.url;
-//                        xhr.async = settings.async;
-//                        xhr.data = settings.data;
-//                        completeBridge(xhr);
-//                    }
-//                }
-//            });
-//        }
+        if(jQuery && $ && jQuery.fn.jquery.substr(0,1) === 1){
+            //兼容jQuery 1.x
+            jQuery( document ).ajaxComplete(function( event, xhr, settings ) {
+                //测试jQuery1.9会把onreadystatechange又覆盖。此处做监听进行兼容判断
+                if(!xhr._onreadystatechange || xhr._onreadystatechange !== xhr.onreadystatechange){
+                    if(!xhr._GlobalAjaxListenerComplete){
+                        xhr.method = settings.type;
+                        xhr.url = settings.url;
+                        xhr.async = settings.async;
+                        xhr.data = settings.data;
+                        completeBridge(xhr);
+                    }
+                }
+            });
+        }
     } else {
         console && console.error("This browser does not support XMLHttpRequest.");
     }
