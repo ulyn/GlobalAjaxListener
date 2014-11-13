@@ -12,28 +12,30 @@
     }
     if (window.XMLHttpRequest) {
         var GlobalAjaxListener = {
+            redirectSupport:false,
             //xhr为扩展对象，含有属性 method,url,async,data
-            open: function (xhr) {
-            },
             beforeSend: function (xhr) {
                 //发送前
-//                xhr.setRequestHeader("myCustomRequestHeader","i am ulyn");
+//              xhr.setRequestHeader("myCustomRequestHeader","i am ulyn");
             },
-            onreadystatechange: function (xhr) {
-                //每当 readyState 属性改变时，就会调用该函数
-                //xhr的onreadystatechange 事件被触发 5 次（0 - 4），对应着 readyState 的每个变化。
-                //但是此处因为xhr的onreadystatechange会被重写，因此我们保险起见，不复杂写
-                // ，只针对send的时候调用，所以readyState是从2开始的。
-//                console.info(xhr.readyState);
-//                if (xhr.readyState==4 && xhr.status==200)
-//                {
-//                    //完成请求
-//                    console.info(xhr);
-//                    console.info(xhr.getAllResponseHeaders());
-//                    console.info(xhr.getResponseHeader("Status"));
-//                }
+            complete: function (xhr) {
+//              //完成请求
+                console.info(xhr);
+//              console.info(xhr.getAllResponseHeaders());
+//              console.info(xhr.getResponseHeader("Status"));
             }
         };
+        var completeBridge = function(xhr){
+            if(GlobalAjaxListener.redirectSupport){
+                var location = xhr.getResponseHeader("Location");
+                if(xhr.getResponseHeader("status") == 302 && location){
+                    //重定向
+                    window.location.href = location;
+                    return;
+                }
+            }
+            GlobalAjaxListener.complete(xhr);
+        }
         GlobalAjaxListener._tempOpen = XMLHttpRequest.prototype.open;
         GlobalAjaxListener._tempSend = XMLHttpRequest.prototype.send;
 
@@ -46,27 +48,47 @@
             if (method.toLowerCase() == 'get') {
                 this.data = url.split('?')[1];
             }
-            GlobalAjaxListener.open(this);
             GlobalAjaxListener._tempOpen.apply(this, arguments);
         }
         XMLHttpRequest.prototype.send = function (data) {
-            var self = this;
+            var xhr = this;
             if(this.method.toLowerCase() == 'post'){
                 this.data = data;
             }
 
-            var _onreadystatechange = self.onreadystatechange;
-            self.onreadystatechange = function () {
-                GlobalAjaxListener.onreadystatechange(self);
+            var _onreadystatechange = xhr.onreadystatechange;
+            xhr.onreadystatechange = function () {
+                if(xhr.readyState==4 && xhr.status==200){
+                    xhr._GlobalAjaxListenerComplete = true;
+                    completeBridge(xhr);
+                }
                 _onreadystatechange && _onreadystatechange();
             }
-            GlobalAjaxListener.beforeSend(self);
-            GlobalAjaxListener._tempSend.apply(self, arguments);
+            xhr._onreadystatechange = xhr.onreadystatechange;
+            GlobalAjaxListener.beforeSend(xhr);
+            GlobalAjaxListener._tempSend.apply(xhr, arguments);
         }
+
+//        if(jQuery && $){
+//            //兼容jQuery
+//            jQuery( document ).ajaxComplete(function( event, xhr, settings ) {
+//                //测试jQuery1.9会把onreadystatechange又覆盖。此处做监听进行兼容判断
+//                if(!xhr._onreadystatechange || xhr._onreadystatechange !== xhr.onreadystatechange){
+//                    if(!xhr._GlobalAjaxListenerComplete){
+//                        xhr.method = settings.type;
+//                        xhr.url = settings.url;
+//                        xhr.async = settings.async;
+//                        xhr.data = settings.data;
+//                        completeBridge(xhr);
+//                    }
+//                }
+//            });
+//        }
     } else {
         console && console.error("This browser does not support XMLHttpRequest.");
     }
 
+    this.GlobalAjaxListener = GlobalAjaxListener;
     // RequireJS && SeaJS
     if (typeof define === 'function') {
         define(function () {
@@ -75,7 +97,7 @@
     } else if (typeof exports !== 'undefined') {
         module.exports = GlobalAjaxListener;
     } else {
-        this.GlobalAjaxListener = GlobalAjaxListener;
+
     }
 
 })();

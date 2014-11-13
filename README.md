@@ -10,28 +10,19 @@ GlobalAjaxListener - 全局ajax监听器
 使用非常简单，重写GlobalAjaxListener的方法即可。具体看下面对象注释吧！   
 
 	var GlobalAjaxListener = {
+            redirectSupport:false,
             //xhr为扩展对象，含有属性 method,url,async,data
-            open: function (xhr) {
-            },
             beforeSend: function (xhr) {
                 //发送前
-                xhr.setRequestHeader("myCustomRequestHeader","i am ulyn");
+	//              xhr.setRequestHeader("myCustomRequestHeader","i am ulyn");
             },
-            onreadystatechange: function (xhr) {
-                //每当 readyState 属性改变时，就会调用该函数
-                //xhr的onreadystatechange 事件被触发 5 次（0 - 4），对应着 readyState 的每个变化。
-                //但是此处因为xhr的onreadystatechange会被重写，因此我们保险起见，不复杂写
-                // ，只针对send的时候调用，所以readyState是从2开始的。
-	//                console.info(xhr.readyState);
-	//                if (xhr.readyState==4 && xhr.status==200)
-	//                {
-	//                    //完成请求
-	//                    console.info(xhr);
-	//                    console.info(xhr.getAllResponseHeaders());
-	//                    console.info(xhr.getResponseHeader("Status"));
-	//                }
-	            
-		}
-      
- 	};
+            complete: function (xhr) {
+	//              //完成请求
+    //              console.info(xhr);
+	//              console.info(xhr.getAllResponseHeaders());
+	//              console.info(xhr.getResponseHeader("Status"));
+            }
+        };
 
+# 注意版本 #
+当ajax使用的太过分了，导致xhr对象都给重写了，GlobalAjaxListener是无法实现监听到完成事件的。比如jquery1.9的版本，请用Jquery.GlobalAjaxListener.js
