@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>示例页面</title>
+    <meta charset="utf-8">
+</head>
+<body>
+    <textarea id="js-text" style="position: absolute;top: 0;bottom: 0;height:98%;width: 98%;"></textarea>
+
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.4.0/jquery.min.js"></script>-->
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>-->
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>-->
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>-->
+    <!--<script src="http://code.jquery.com/jquery-1.11.2.min.js"></script>-->
+    <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.0/jquery.js"></script>-->
+    <script src="jquery-1.11.0.js"></script>
+    <!--<script src="jquery-2.1.3.js"></script>-->
+    <script src="GlobalAjaxListener.js"></script>
+    <script>
+        function log(text){
+            var txt = document.getElementById("js-text").value;
+            document.getElementById("js-text").value = new Date() + " - " + text + "\n" + txt;
+        }
+        GlobalAjaxListener.init({
+            //是否支持重定向，不能跨域
+            redirectSupport:false,
+            //xhr为扩展对象，含有属性 method,url,async,data
+            beforeSend: function (xhr) {
+                //发送前
+                xhr.setRequestHeader("myCustomRequestHeader","i am ulyn");
+                log("beforeSend：" + JSON.stringify(xhr.GlobalAjaxListenerParmas));
+
+                //停止请求
+//                GlobalAjaxListener.abort(xhr);
+//                log("停止请求");
+            },
+            onResponse: function (xhr) {
+//              //完成请求
+                console.info(xhr);
+                log("complete：status:"+xhr.getResponseHeader("Status"));
+//                console.info(xhr);
+//              console.info(xhr.getAllResponseHeaders());
+//              console.info(xhr.getResponseHeader("Status"));
+                //阻止返回的处理
+//                GlobalAjaxListener.abort(xhr);
+//                log("阻止返回的处理");
+            }
+        });
+        //原生的ajax
+        function ajax() {
+            var xmlHttpReq = new XMLHttpRequest();
+            if (xmlHttpReq != null) {
+                xmlHttpReq.open("get", "README.md", true);
+                xmlHttpReq.send(null);
+                xmlHttpReq.onreadystatechange =  function() {
+                    if (xmlHttpReq.readyState == 4) {//4代表执行完成
+                        if (xmlHttpReq.status == 200) {//200代表执行成功
+                            log("result："+xmlHttpReq.responseText);
+                        }
+                    }else{
+                        log("xmlHttpReq.readyState："+xmlHttpReq.readyState);
+                    }
+                };
+            }
+        }
+//        ajax();
+        //jquery ajax
+        function jqueryAjax(){
+            $.get("README.md",function(data){
+                log("jquery ajax 返回：");
+            });
+        }
+        jqueryAjax();
+    </script>
+</body>
+</html>

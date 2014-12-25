@@ -1,4 +1,18 @@
-!(function () {
+"use strict";
+(function (factory) {
+    if (typeof exports === 'object') {
+        // Node. Does not work with strict CommonJS, but
+        // only CommonJS-like enviroments that support module.exports,
+        // like Node.
+        module.exports = factory();
+    } else if (typeof define === 'function' && define.amd) {
+        // AMD. Register as an anonymous module.
+        define(factory);
+    } else {
+        // Browser globals
+        window.GlobalAjaxListener = factory();
+    }
+}(function () {
     // Added for IE5,6 support
     if (window && !window.XMLHttpRequest && window.ActiveXObject) {
         window.XMLHttpRequest = function () {
@@ -10,23 +24,28 @@
             }
         };
     }
-    if (window.XMLHttpRequest) {
-        var GlobalAjaxListener = {
+    if (window && !window.XMLHttpRequest) {
+        console && console.error("This browser does not support XMLHttpRequest.");
+        return;
+    }
+    var OriXMLHttpRequest = window.XMLHttpRequest;
+    var GlobalAjaxListener = {},
+        listenerOpts = {
             //是否支持重定向，不能跨域
             redirectSupport:false,
-            //xhr为扩展对象，含有属性 method,url,async,data
+            //xhr增加GlobalAjaxListenerParmas对象，含有属性 method,url,async,data
             beforeSend: function (xhr) {
                 //发送前
-//              xhr.setRequestHeader("myCustomRequestHeader","i am ulyn");
+                //              xhr.setRequestHeader("myCustomRequestHeader","i am ulyn");
             },
-            complete: function (xhr) {
-//              //完成请求
-                console.info(xhr);
-//              console.info(xhr.getAllResponseHeaders());
-//              console.info(xhr.getResponseHeader("Status"));
+            onResponse: function (xhr) {
+                //              //完成请求
+//                    console.info("onResponse",xhr);
+                //              console.info(xhr.getAllResponseHeaders());
+                //              console.info(xhr.getResponseHeader("Status"));
             }
-        };
-        var completeBridge = function(xhr){
+        },
+        onResponse = function(xhr){
             if(GlobalAjaxListener.redirectSupport){
                 var location = xhr.getResponseHeader("Location");
                 if(xhr.getResponseHeader("status") == 302 && location){
@@ -35,70 +54,73 @@
                     return;
                 }
             }
-            GlobalAjaxListener.complete(xhr);
-        }
-        GlobalAjaxListener._tempOpen = XMLHttpRequest.prototype.open;
-        GlobalAjaxListener._tempSend = XMLHttpRequest.prototype.send;
+            listenerOpts.onResponse(xhr);
+        };
 
-        XMLHttpRequest.prototype.open = function (method, url, async) {
-            if (!method) method = '';
-            if (!url) url = '';
-            this.method = method;
-            this.url = url;
-            this.async = async;
-            if (method.toLowerCase() == 'get') {
-                this.data = url.split('?')[1];
-            }
-            GlobalAjaxListener._tempOpen.apply(this, arguments);
+    GlobalAjaxListener.init = function(opts){
+        for(var key in listenerOpts){
+            listenerOpts[key] = opts[key] || listenerOpts[key];
         }
-        XMLHttpRequest.prototype.send = function (data) {
-            var xhr = this;
-            if(this.method.toLowerCase() == 'post'){
-                this.data = data;
-            }
+    }
+    GlobalAjaxListener.abort = function(xhr){
+        if(xhr.GlobalAjaxListenerParmas){
+            xhr.GlobalAjaxListenerParmas.isAbort = true;
+        }
+    }
+    GlobalAjaxListener.xhrOpen = OriXMLHttpRequest.prototype.open;
+    GlobalAjaxListener.xhrSend = OriXMLHttpRequest.prototype.send;
+    //重写XMLHttpRequest的open，截取请求参数
+    OriXMLHttpRequest.prototype.open = function (method, url, async) {
+        var requestParams = this.GlobalAjaxListenerParmas = {
+            method : (method && method.toLowerCase()) || '',
+            url : url,
+            async : async,
+            data:null,
+            isAbort:false
+        }
+        if(requestParams.method == 'get'){
+            requestParams.data = url.split('?')[1];
+        }
+        GlobalAjaxListener.xhrOpen.apply(this, arguments);
+    }
+    //重写XMLHttpRequest的send，截取返回值
+    OriXMLHttpRequest.prototype.send = function (data) {
+        var xhr = this;
+        var requestParams = xhr.GlobalAjaxListenerParmas;
+        if(requestParams.method == 'post'){
+            requestParams.data = data;
+        }
+        listenerOpts.beforeSend(xhr);
+        modifyOnreadystatechange(xhr);
+    }
 
-            var _onreadystatechange = xhr.onreadystatechange;
+    function modifyOnreadystatechange(xhr){
+        //有些使用onload 而不是用onreadystatechange
+        var onreadystatechange = xhr.onreadystatechange;
+//        console.info("modifyOnreadystatechange",onreadystatechange);
+//        console.info(new Date().getTime());
+        var requestParams = xhr.GlobalAjaxListenerParmas;
+        if(requestParams.isAbort){
+            return;
+        }
+        if(onreadystatechange == null && xhr.onload == null){
+            //当onreadystatechange为空时，延迟处理，因为send可能写在onreadystatechange之前
+            setTimeout(function(){ modifyOnreadystatechange(xhr);});
+        }else{
+//            var modifyProName = xhr.onreadystatechange?"onreadystatechange":"onload";
             xhr.onreadystatechange = function () {
+                console.info(xhr.readyState);
                 if(xhr.readyState==4 && xhr.status==200){
-                    xhr._GlobalAjaxListenerComplete = true;
-                    completeBridge(xhr);
+//                    console.info(new Date().getTime());
+                    onResponse(xhr);
                 }
-                _onreadystatechange && _onreadystatechange();
-            }
-            xhr._onreadystatechange = xhr.onreadystatechange;
-            GlobalAjaxListener.beforeSend(xhr);
-            GlobalAjaxListener._tempSend.apply(xhr, arguments);
-        }
-
-        if(jQuery && $ && jQuery.fn.jquery.split(".")[0] == '1'){
-            //兼容jQuery 1.x
-            jQuery( document ).ajaxComplete(function( event, xhr, settings ) {
-                //测试jQuery1.9会把onreadystatechange又覆盖。此处做监听进行兼容判断
-                if(!xhr._onreadystatechange || xhr._onreadystatechange !== xhr.onreadystatechange){
-                    if(!xhr._GlobalAjaxListenerComplete){
-                        xhr.method = settings.type;
-                        xhr.url = settings.url;
-                        xhr.async = settings.async;
-                        xhr.data = settings.data;
-                        completeBridge(xhr);
-                    }
+                if(!xhr.GlobalAjaxListenerParmas.isAbort){
+                    onreadystatechange && onreadystatechange();
                 }
-            });
+            };
+            GlobalAjaxListener.xhrSend.apply(xhr, arguments);
+//            console.info(new Date().getTime());
         }
-    } else {
-        console && console.error("This browser does not support XMLHttpRequest.");
     }
-
-    this.GlobalAjaxListener = GlobalAjaxListener;
-    // RequireJS && SeaJS
-    if (typeof define === 'function') {
-        define(function () {
-            return GlobalAjaxListener;
-        });
-    } else if (typeof exports !== 'undefined') {
-        module.exports = GlobalAjaxListener;
-    } else {
-
-    }
-
-})();
+    return GlobalAjaxListener;
+}));
