@@ -14,19 +14,23 @@ GlobalAjaxListener - 全局ajax监听器
 
 listenerOpts对象包含key值：
 
-|| *key* || *type* || *default* || *remark* ||
-|| redirectSupport || boolean || false || 是否支持重定向，不能跨域 ||
-|| beforeSend || function(xhr) || 空函数 || 当请求发送之前调用 ||
-|| onResponse || function(xhr) || 空函数 || 当请求响应内容后调用 ||
+字段 | 类型 | 默认值| 说明
+------------ | ------------- | ------------ | ------------
+redirectSupport | boolean | ``false`` | 是否支持重定向，不能跨域
+beforeSend | function(xhr) | ``空函数`` | 当请求发送之前调用
+onResponse | function(xhr) | ``空函数`` | 当请求响应内容后调用
+
 
 其中xhr对象为XMLHttpRequest，从中扩展属性GlobalAjaxListenerParmas，如下
 
-|| *key* || *type* || *default* || *remark* ||
-|| method || string || '' || 请求方式post或get ||
-|| url || string || null || 请求url ||
-|| async || boolean || null || 请求是否异步 ||
-|| data || string || null || 请求参数 ||
-|| isAbort || boolean || false || 是否中断请求执行 ||
+字段 | 类型 | 默认值| 说明
+------------ | ------------- | ------------ | ------------
+method | string | ``''`` | 请求方式post或get
+url | string | ``null`` | 请求url
+async | boolean | ``null`` | 请求是否异步
+data | string | ``null`` | 请求参数
+isAbort | boolean | ``false`` | 是否中断请求执行
+
 
 3.请求中断：
 
