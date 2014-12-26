@@ -109,7 +109,7 @@
         }else{
 //            var modifyProName = xhr.onreadystatechange?"onreadystatechange":"onload";
             xhr.onreadystatechange = function () {
-                console.info(xhr.readyState);
+//                console.info(xhr.readyState);
                 if(xhr.readyState==4 && xhr.status==200){
 //                    console.info(new Date().getTime());
                     onResponse(xhr);

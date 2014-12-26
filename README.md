@@ -7,22 +7,48 @@ GlobalAjaxListener - 全局ajax监听器
 
 # GlobalAjaxListener 对象#
 
-使用非常简单，重写GlobalAjaxListener的方法即可。具体看下面对象注释吧！   
+1、获取GlobalAjaxListener对象：GlobalAjaxListener（非模块化的则暴露在window）   
+2、初始化参数listenerOpts：
 
-	var GlobalAjaxListener = {
-            redirectSupport:false,
-            //xhr为扩展对象，含有属性 method,url,async,data
-            beforeSend: function (xhr) {
-                //发送前
-	//              xhr.setRequestHeader("myCustomRequestHeader","i am ulyn");
-            },
-            complete: function (xhr) {
-	//              //完成请求
-    //              console.info(xhr);
-	//              console.info(xhr.getAllResponseHeaders());
-	//              console.info(xhr.getResponseHeader("Status"));
-            }
-        };
+	GlobalAjaxListener.init(opts)
 
-# 注意版本 #
-当ajax使用的太过分了，导致xhr对象都给重写了，GlobalAjaxListener是无法实现监听到完成事件的。比如jquery2以上的版本，请用Jquery2.GlobalAjaxListener.js
+listenerOpts对象包含key值：
+
+|| *key* || *type* || *default* || *remark* ||
+|| redirectSupport || boolean || false || 是否支持重定向，不能跨域 ||
+|| beforeSend || function(xhr) || 空函数 || 当请求发送之前调用 ||
+|| onResponse || function(xhr) || 空函数 || 当请求响应内容后调用 ||
+
+其中xhr对象为XMLHttpRequest，从中扩展属性GlobalAjaxListenerParmas，如下
+
+|| *key* || *type* || *default* || *remark* ||
+|| method || string || '' || 请求方式post或get ||
+|| url || string || null || 请求url ||
+|| async || boolean || null || 请求是否异步 ||
+|| data || string || null || 请求参数 ||
+|| isAbort || boolean || false || 是否中断请求执行 ||
+
+3.请求中断：
+
+	GlobalAjaxListener.abort(xhr);
+
+注：初始化操作需要在发起ajax之前完成。
+
+# 原理简述 #
+
+浏览器发起ajax基于XMLHttpRequest/ActiveXObject对象，对象有统一的接口，整个请求流程必定调用是open、send、onreadystatechange。所以只要我们重写open、send、onreadystatechange即可做一些我们想要的事情。
+
+事情并不简单，onreadystatechange是外部函数，当send的时候，我们需要把外部函数再进行一次封装，然而，事与愿违，有些人喜欢这样写：
+
+	xmlHttpReq.open("get", "README.md", true);
+    xmlHttpReq.send(null);
+    xmlHttpReq.onreadystatechange =  function() {}
+
+当这样写的时候，send对onreadystatechange进行封装也没用，外部又对它进行重新定义。
+我们该怎么办呢？本能想onreadystatechange赋值的时候，我再对它进行改写。ES6有对象属性监听回调的方法，但是对于兼容性来讲，目前不适合。那么不然我们就这样做吧：认为onreadystatechange外部调用时候只会赋值一次，当send的时候，写个定时器判断onreadystatechange的变化（初始时候它为空），当变化时候就达到目的改写了！
+
+然后，更甚者，jquery2使用onload，而不定义onreadystatechange。对onreadystatechange的空值判断变成了死循环！！好吧，那我再对onload进行判断，当onload定义的时候，即可进行改写。
+
+经测试，此版本兼容jquery1.4以上。
+
+建议：onreadystatechange或者onload写在send之前~
