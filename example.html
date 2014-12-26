@@ -13,15 +13,15 @@
     <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>-->
     <!--<script src="http://code.jquery.com/jquery-1.11.2.min.js"></script>-->
     <!--<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.0.0/jquery.js"></script>-->
-    <script src="jquery-1.11.0.js"></script>
-    <!--<script src="jquery-2.1.3.js"></script>-->
+    <!--<script src="jquery-1.11.0.js"></script>-->
+    <script src="jquery-2.1.3.js"></script>
     <script src="GlobalAjaxListener.js"></script>
     <script>
         function log(text){
             var txt = document.getElementById("js-text").value;
             document.getElementById("js-text").value = new Date() + " - " + text + "\n" + txt;
         }
-        GlobalAjaxListener.init({
+        GlobalAjaxListener.extend({
             //是否支持重定向，不能跨域
             redirectSupport:false,
             //xhr为扩展对象，含有属性 method,url,async,data
@@ -46,6 +46,7 @@
 //                log("阻止返回的处理");
             }
         });
+        console.info(GlobalAjaxListener)
         //原生的ajax
         function ajax() {
             var xmlHttpReq = new XMLHttpRequest();

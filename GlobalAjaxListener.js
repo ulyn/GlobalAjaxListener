@@ -28,47 +28,44 @@
         console && console.error("This browser does not support XMLHttpRequest.");
         return;
     }
+    //定义监听器
     var OriXMLHttpRequest = window.XMLHttpRequest;
-    var GlobalAjaxListener = {},
-        listenerOpts = {
-            //是否支持重定向，不能跨域
-            redirectSupport:false,
-            //xhr增加GlobalAjaxListenerParmas对象，含有属性 method,url,async,data
-            beforeSend: function (xhr) {
-                //发送前
-                //              xhr.setRequestHeader("myCustomRequestHeader","i am ulyn");
-            },
-            onResponse: function (xhr) {
-                //              //完成请求
-//                    console.info("onResponse",xhr);
-                //              console.info(xhr.getAllResponseHeaders());
-                //              console.info(xhr.getResponseHeader("Status"));
-            }
-        },
-        onResponse = function(xhr){
-            if(GlobalAjaxListener.redirectSupport){
-                var location = xhr.getResponseHeader("Location");
-                if(xhr.getResponseHeader("status") == 302 && location){
-                    //重定向
-                    window.location.href = location;
-                    return;
-                }
-            }
-            listenerOpts.onResponse(xhr);
-        };
+    function GlobalAjaxListener(){
 
-    GlobalAjaxListener.init = function(opts){
-        for(var key in listenerOpts){
-            listenerOpts[key] = opts[key] || listenerOpts[key];
-        }
     }
-    GlobalAjaxListener.abort = function(xhr){
+    GlobalAjaxListener.prototype.redirectSupport = false;//是否支持重定向，不能跨域
+    GlobalAjaxListener.prototype.beforeSend = function (xhr) {
+        //发送前
+        //              xhr.setRequestHeader("myCustomRequestHeader","i am ulyn");
+    };
+    GlobalAjaxListener.prototype.extend = function(opts){
+        for(var key in opts){
+            if(key == 'extend' || key == 'xhrOpen' || key == 'xhrSend' || key == 'abort'){
+                continue;
+            }
+            this[key] = opts[key] || this[key];
+        }
+    };
+    GlobalAjaxListener.prototype.xhrOpen = OriXMLHttpRequest.prototype.open;
+    GlobalAjaxListener.prototype.xhrSend = OriXMLHttpRequest.prototype.send;
+    GlobalAjaxListener.prototype.onResponse = function (xhr) {
+        //              //完成请求
+//                    console.info("onResponse",xhr);
+        //              console.info(xhr.getAllResponseHeaders());
+        //              console.info(xhr.getResponseHeader("Status"));
+    };
+    GlobalAjaxListener.prototype.abort = function(xhr){
         if(xhr.GlobalAjaxListenerParmas){
             xhr.GlobalAjaxListenerParmas.isAbort = true;
         }
-    }
-    GlobalAjaxListener.xhrOpen = OriXMLHttpRequest.prototype.open;
-    GlobalAjaxListener.xhrSend = OriXMLHttpRequest.prototype.send;
+        try{
+            xhr.abort();
+        }catch (e){
+            console && console.error(e);
+        }
+    };
+
+    var listener = new GlobalAjaxListener();
     //重写XMLHttpRequest的open，截取请求参数
     OriXMLHttpRequest.prototype.open = function (method, url, async) {
         var requestParams = this.GlobalAjaxListenerParmas = {
@@ -81,7 +78,7 @@
         if(requestParams.method == 'get'){
             requestParams.data = url.split('?')[1];
         }
-        GlobalAjaxListener.xhrOpen.apply(this, arguments);
+        listener.xhrOpen.apply(this, arguments);
     }
     //重写XMLHttpRequest的send，截取返回值
     OriXMLHttpRequest.prototype.send = function (data) {
@@ -90,9 +87,24 @@
         if(requestParams.method == 'post'){
             requestParams.data = data;
         }
-        listenerOpts.beforeSend(xhr);
+        listener.beforeSend(xhr);
         modifyOnreadystatechange(xhr);
     }
+
+    function onResponseBridge(xhr) {
+        if (listener.redirectSupport) {
+            var location = xhr.getResponseHeader("Location");
+            if (xhr.getResponseHeader("status") == 302 && location) {
+                //重定向
+                window.location.href = location;
+                return;
+            }
+        }
+        var status = listener.onResponse(xhr);
+        if(status === false){
+            listener.abort(xhr);
+        }
+    };
 
     function modifyOnreadystatechange(xhr){
         //有些使用onload 而不是用onreadystatechange
@@ -112,15 +124,15 @@
 //                console.info(xhr.readyState);
                 if(xhr.readyState==4 && xhr.status==200){
 //                    console.info(new Date().getTime());
-                    onResponse(xhr);
+                    onResponseBridge(xhr);
                 }
                 if(!xhr.GlobalAjaxListenerParmas.isAbort){
                     onreadystatechange && onreadystatechange();
                 }
             };
-            GlobalAjaxListener.xhrSend.apply(xhr, arguments);
+            listener.xhrSend.apply(xhr, arguments);
 //            console.info(new Date().getTime());
         }
     }
-    return GlobalAjaxListener;
+    return listener;
 }));
