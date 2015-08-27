@@ -33,7 +33,7 @@
     function GlobalAjaxListener(){
 
     }
-    GlobalAjaxListener.prototype.redirectSupport = false;//是否支持重定向，不能跨域
+//    GlobalAjaxListener.prototype.onRedirectResponse = function(url,xhr){};//支持重定向处理，不能跨域
     GlobalAjaxListener.prototype.beforeSend = function (xhr) {
         //发送前
         //              xhr.setRequestHeader("myCustomRequestHeader","i am ulyn");
@@ -55,9 +55,7 @@
         //              console.info(xhr.getResponseHeader("Status"));
     };
     GlobalAjaxListener.prototype.abort = function(xhr){
-        if(xhr.GlobalAjaxListenerParmas){
-            xhr.GlobalAjaxListenerParmas.isAbort = true;
-        }
+        xhr.listenerParams.isAbort = true;
         try{
             xhr.abort();
         }catch (e){
@@ -66,15 +64,23 @@
     };
 
     var listener = new GlobalAjaxListener();
+    OriXMLHttpRequest.prototype.listenerParams = {
+        headers:{},
+        data:null
+    };
+    var SetHttpHeader = OriXMLHttpRequest.prototype.setRequestHeader;
+    OriXMLHttpRequest.prototype.setRequestHeader = function(key,value){
+        this.listenerParams.headers[key] = value;
+        SetHttpHeader.apply(this,arguments);
+    }
     //重写XMLHttpRequest的open，截取请求参数
     OriXMLHttpRequest.prototype.open = function (method, url, async) {
-        var requestParams = this.GlobalAjaxListenerParmas = {
-            method : (method && method.toLowerCase()) || '',
-            url : url,
-            async : async,
-            data:null,
-            isAbort:false
-        }
+        var requestParams = this.listenerParams;
+        requestParams.method = (method && method.toLowerCase()) || '',
+        requestParams.url = url,
+        requestParams.async = async,
+        requestParams.data = null,
+        requestParams.isAbort = false;
         if(requestParams.method == 'get'){
             requestParams.data = url.split('?')[1];
         }
@@ -83,20 +89,24 @@
     //重写XMLHttpRequest的send，截取返回值
     OriXMLHttpRequest.prototype.send = function (data) {
         var xhr = this;
-        var requestParams = xhr.GlobalAjaxListenerParmas;
+        var requestParams = xhr.listenerParams;
         if(requestParams.method == 'post'){
             requestParams.data = data;
         }
-        listener.beforeSend(xhr);
-        modifyOnreadystatechange(xhr);
+        var continueSend = listener.beforeSend(xhr);
+        if(continueSend === false){
+            listener.abort(xhr);
+        }else{
+            modifyOnreadystatechange(xhr);
+        }
     }
 
     function onResponseBridge(xhr) {
-        if (listener.redirectSupport) {
+        if (listener.onRedirectResponse) {
             var location = xhr.getResponseHeader("Location");
             if (xhr.getResponseHeader("status") == 302 && location) {
                 //重定向
-                window.location.href = location;
+                listener.onRedirectResponse(location,xhr);
                 return;
             }
         }
@@ -111,7 +121,7 @@
         var onreadystatechange = xhr.onreadystatechange;
 //        console.info("modifyOnreadystatechange",onreadystatechange);
 //        console.info(new Date().getTime());
-        var requestParams = xhr.GlobalAjaxListenerParmas;
+        var requestParams = xhr.listenerParams;
         if(requestParams.isAbort){
             return;
         }
@@ -126,11 +136,11 @@
 //                    console.info(new Date().getTime());
                     onResponseBridge(xhr);
                 }
-                if(!xhr.GlobalAjaxListenerParmas.isAbort){
+                if(!xhr.listenerParams.isAbort){
                     onreadystatechange && onreadystatechange();
                 }
             };
-            listener.xhrSend.apply(xhr, arguments);
+            listener.xhrSend.call(xhr, xhr.listenerParams.data);
 //            console.info(new Date().getTime());
         }
     }

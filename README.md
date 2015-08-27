@@ -7,23 +7,23 @@ GlobalAjaxListener - 全局ajax监听器
 
 # GlobalAjaxListener 对象#
 
-1、获取GlobalAjaxListener对象：GlobalAjaxListener（非模块化的则暴露在window）   
+1、获取GlobalAjaxListener对象：var listener = GlobalAjaxListener（非模块化的则暴露在window）
 2、初始化参数：
 
-	GlobalAjaxListener.extend(opts)
+	listener.extend(opts)
 
-对象属性：
+opts对象属性：
 
 字段 | 类型 | 默认值| 说明
 ------------ | ------------- | ------------ | ------------
-redirectSupport | boolean | ``false`` | 是否支持重定向，不能跨域
-beforeSend | function(xhr) | ``空函数`` | 当请求发送之前调用
+onRedirectResponse | function(url,xhr) | ``null`` | 支持重定向返回的处理，不能跨域
+beforeSend | function(xhr) | ``空函数`` | 当请求发送之前调用,当返回false时，停止往下执行
 onResponse | function(xhr) | ``空函数`` | 当请求响应内容后调用,当返回false时，停止往下执行
 extend | function(opts) | ```` | 扩展定义对象
 abort | function(xhr) | ```` | 请求中断
 
 
-其中xhr对象为XMLHttpRequest，从中扩展属性GlobalAjaxListenerParmas，如下
+其中xhr对象为XMLHttpRequest，并且它扩展原型属性listenerParams，如下
 
 字段 | 类型 | 默认值| 说明
 ------------ | ------------- | ------------ | ------------
@@ -32,6 +32,7 @@ url | string | ``null`` | 请求url
 async | boolean | ``null`` | 请求是否异步
 data | string | ``null`` | 请求参数
 isAbort | boolean | ``false`` | 是否中断请求执行
+headers | Object | ``{}`` | 是否中断请求执行
 
 
 3.请求中断：

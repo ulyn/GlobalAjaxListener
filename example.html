@@ -22,13 +22,13 @@
             document.getElementById("js-text").value = new Date() + " - " + text + "\n" + txt;
         }
         GlobalAjaxListener.extend({
-            //是否支持重定向，不能跨域
-            redirectSupport:false,
+            //支持重定向处理，不能跨域
+            onRedirectResponse:null,
             //xhr为扩展对象，含有属性 method,url,async,data
             beforeSend: function (xhr) {
                 //发送前
                 xhr.setRequestHeader("myCustomRequestHeader","i am ulyn");
-                log("beforeSend：" + JSON.stringify(xhr.GlobalAjaxListenerParmas));
+                log("beforeSend：" + JSON.stringify(xhr.listenerParams));
 
                 //停止请求
 //                GlobalAjaxListener.abort(xhr);
@@ -37,7 +37,7 @@
             onResponse: function (xhr) {
 //              //完成请求
                 console.info(xhr);
-                log("complete：status:"+xhr.getResponseHeader("Status"));
+                log("complete：response status:"+xhr.getResponseHeader("Status"));
 //                console.info(xhr);
 //              console.info(xhr.getAllResponseHeaders());
 //              console.info(xhr.getResponseHeader("Status"));
@@ -46,7 +46,7 @@
 //                log("阻止返回的处理");
             }
         });
-        console.info(GlobalAjaxListener)
+        console.info(GlobalAjaxListener);
         //原生的ajax
         function ajax() {
             var xmlHttpReq = new XMLHttpRequest();
@@ -68,7 +68,10 @@
         //jquery ajax
         function jqueryAjax(){
             $.get("README.md",function(data){
-                log("jquery ajax 返回：");
+                log("jquery ajax get 返回：" + (data?data.substr(0,30)+"...":""));
+            });
+            $.post("README.md",{a:1,b:2},function(data){
+                log("jquery ajax post 返回：" + (data?data.substr(0,30)+"...":""));
             });
         }
         jqueryAjax();
